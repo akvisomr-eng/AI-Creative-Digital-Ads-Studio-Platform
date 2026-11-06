@@ -1,3 +1,5 @@
 import { NextResponse } from "next/server";
-export const dynamic = "force-dynamic";
-export async function GET(){const configured=Boolean(process.env.DATABASE_URL);return NextResponse.json({status:configured?"ready_for_db_check":"degraded",checks:{app:"ok",database:configured?"configured":"not_configured"},timestamp:new Date().toISOString()},{status:configured?200:503});}
+import { sql } from "drizzle-orm";
+import { getDb } from "@/db";
+export const dynamic="force-dynamic";
+export async function GET(){const checks:Record<string,string>={app:"ok",database:"not_configured"};try{const db=getDb();await db.execute(sql`select 1`);checks.database="ok";return NextResponse.json({status:"ok",checks,timestamp:new Date().toISOString()});}catch{checks.database=process.env.DATABASE_URL?"unavailable":"not_configured";return NextResponse.json({status:"degraded",checks,timestamp:new Date().toISOString()},{status:503});}}
