@@ -5,7 +5,7 @@ on:
     branches: [main, "feat/**"]
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
@@ -24,6 +24,15 @@ jobs:
         env:
           DRIZZLE_GENERATE: true
         run: npm run db:generate
+      - name: Commit generated lockfile and migration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json drizzle/
+          if ! git diff --cached --quiet; then
+            git commit -m "build: commit reproducible lockfile and initial migration"
+            git push
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: drizzle-migrations
