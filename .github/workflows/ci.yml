@@ -25,13 +25,15 @@ jobs:
           DRIZZLE_GENERATE: true
         run: npm run db:generate
       - name: Commit generated lockfile and migration
+        if: github.event_name == 'push'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add package-lock.json drizzle/
           if ! git diff --cached --quiet; then
             git commit -m "build: commit reproducible lockfile and initial migration"
-            git push
+            git pull --rebase origin "${GITHUB_REF_NAME}"
+            git push origin "HEAD:${GITHUB_REF}"
           fi
       - uses: actions/upload-artifact@v4
         with:
