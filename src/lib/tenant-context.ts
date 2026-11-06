@@ -1,0 +1,7 @@
+import { and,eq } from "drizzle-orm";
+import { headers } from "next/headers";
+import { getAuth } from "@/lib/auth";
+import { getDb } from "@/db";
+import { tenantMemberships,tenants } from "@/db/schema/core";
+export class TenantContextError extends Error{constructor(message:string,readonly status=403){super(message);this.name="TenantContextError";}}
+export async function requireTenantContext(requestHeaders?:Headers){const h=requestHeaders??await headers();const session=await getAuth().api.getSession({headers:h});if(!session)throw new TenantContextError("Authentication required.",401);const db=getDb();const memberships=await db.select({membershipId:tenantMemberships.id,tenantId:tenants.id,tenantName:tenants.name,tenantSlug:tenants.slug}).from(tenantMemberships).innerJoin(tenants,eq(tenantMemberships.tenantId,tenants.id)).where(and(eq(tenantMemberships.userId,session.user.id),eq(tenantMemberships.status,"active"),eq(tenants.status,"active")));if(memberships.length===0)throw new TenantContextError("No active organization membership.",403);const requested=h.get("x-tenant-id");const selected=requested?memberships.find(m=>m.tenantId===requested):memberships.length===1?memberships[0]:undefined;if(!selected)throw new TenantContextError(requested?"Organization membership not found.":"Select an active organization.",403);return {user:session.user,tenant:{id:selected.tenantId,name:selected.tenantName,slug:selected.tenantSlug},membershipId:selected.membershipId};}

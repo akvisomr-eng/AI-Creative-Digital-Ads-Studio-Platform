@@ -1,0 +1,6 @@
+import { and,eq } from "drizzle-orm";
+import { getDb } from "@/db";
+import { membershipRoles,permissions,rolePermissions } from "@/db/schema/core";
+import { requireTenantContext,TenantContextError } from "@/lib/tenant-context";
+export type DataScope="own"|"assigned"|"department"|"branch"|"organization"|"agency_client"|"reseller_attributed"|"platform"|"none";
+export async function requirePermission(permissionCode:string,requestHeaders?:Headers){const context=await requireTenantContext(requestHeaders);const db=getDb();const grants=await db.select({scope:rolePermissions.scopePolicy}).from(membershipRoles).innerJoin(rolePermissions,eq(membershipRoles.roleId,rolePermissions.roleId)).innerJoin(permissions,eq(rolePermissions.permissionId,permissions.id)).where(and(eq(membershipRoles.tenantId,context.tenant.id),eq(membershipRoles.membershipId,context.membershipId),eq(rolePermissions.tenantId,context.tenant.id),eq(permissions.code,permissionCode)));if(!grants.length)throw new TenantContextError("Permission denied.",403);const scopes=[...new Set(grants.map(g=>g.scope as DataScope))];if(scopes.includes("none")&&!scopes.some(s=>s!=="none"))throw new TenantContextError("Permission denied.",403);return {...context,permission:permissionCode,scopes:scopes.filter(s=>s!=="none")};}
