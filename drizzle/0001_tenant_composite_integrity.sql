@@ -126,7 +126,7 @@ BEGIN
   IF (NEW.tenant_id IS DISTINCT FROM OLD.tenant_id OR NEW.is_system IS DISTINCT FROM OLD.is_system)
      AND (
        EXISTS (SELECT 1 FROM "membership_roles" mr WHERE mr.role_id = OLD.id
-         AND NOT (NEW.tenant_id = mr.tenant_id OR (NEW.tenant_id IS NULL AND NEW.is_system = TRUE)))
+         AND NOT (NEW.tenant_id IS NOT DISTINCT FROM mr.tenant_id OR (NEW.tenant_id IS NULL AND NEW.is_system = TRUE)))
        OR EXISTS (SELECT 1 FROM "role_permissions" rp WHERE rp.role_id = OLD.id
          AND NOT (rp.tenant_id IS NULL AND NEW.tenant_id IS NULL AND NEW.is_system = TRUE)
          AND rp.tenant_id IS DISTINCT FROM NEW.tenant_id)
