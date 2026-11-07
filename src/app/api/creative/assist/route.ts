@@ -9,7 +9,13 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest) {
   try {
     await requirePermission("orders.create", request.headers);
-    const body = await request.json() as { action?: unknown; brief?: unknown; input?: unknown };
+    const declaredLength = Number(request.headers.get("content-length") || 0);
+    if (declaredLength > 12_000) return NextResponse.json({ error: "Payload terlalu besar." }, { status: 413 });
+    const rawBody = await request.text();
+    if (rawBody.length > 12_000) return NextResponse.json({ error: "Payload terlalu besar." }, { status: 413 });
+    let body: { action?: unknown; brief?: unknown; input?: unknown };
+    try { body = JSON.parse(rawBody) as typeof body; }
+    catch { return NextResponse.json({ error: "Format JSON tidak valid." }, { status: 400 }); }
     if (body.action === "analyze") {
       if (typeof body.brief !== "string") return NextResponse.json({ error: "Brief harus berupa teks." }, { status: 400 });
       return NextResponse.json({ data: analyzeOrder(body.brief) });
