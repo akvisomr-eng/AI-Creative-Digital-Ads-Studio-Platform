@@ -8,6 +8,13 @@
       "when": 1794007848208,
       "tag": "0000_black_lionheart",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794088800000,
+      "tag": "0001_tenant_composite_integrity",
+      "breakpoints": true
     }
   ]
 }
