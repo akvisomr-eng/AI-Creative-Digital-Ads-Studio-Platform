@@ -1,12 +1,12 @@
 # Tenant Data Integrity Audit
 
 **Baseline:** `main` after PR #3 (tenant-role isolation)  
-**Scope:** Static review of `src/db/schema/core.ts`, the initial Drizzle migration, and tenant-context / permission resolution.  
+**Scope:** Static review of `src/db/schema/core.ts`, the initial Drizzle migration, tenant-context / permission resolution, and currently implemented API routes.  
 **Safety:** This document is an audit artifact only. It does not apply SQL to any Neon branch or production database.
 
 ## Summary
 
-Application permission resolution now filters membership-role assignments and role-permission grants by the active tenant, and accepts a role only when it belongs to that tenant or is explicitly a system role. This is a useful authorization-layer guard.
+Application permission resolution filters membership-role assignments and role-permission grants by the active tenant, and accepts a role only when it belongs to that tenant or is explicitly a system role. This is a useful authorization-layer guard.
 
 The database schema still models many tenant-owned relationships as independent single-column foreign keys. A normal foreign key proves that the referenced row exists; it does not prove that the referenced row has the same `tenant_id` as the source row. A cross-tenant reference can therefore remain representable if an application write path is defective or bypassed.
 
@@ -37,6 +37,14 @@ Review and protect these relationships with composite candidate keys and composi
 
 **System-role exception:** `roles.tenant_id IS NULL AND roles.is_system = true` is intentional. Do not force system roles through a tenant-owned composite FK. Keep system-role handling explicit in the permission query and add tests for both valid system roles and rejected non-system global roles. Consider a separate assignment design or a database trigger/checking function for this exception rather than weakening tenant-role constraints.
 
+## Implemented API route review
+
+- `GET /api/customers` filters reads by the tenant resolved from `requirePermission`; the tenant is not taken from the request query.
+- `POST /api/customers` assigns `tenantId` and owner from the authenticated tenant context rather than accepting them from the request body.
+- The catch-all workspace module page currently checks for a session but does not resolve an active tenant context. It is presently a placeholder page with no tenant data query. Before any module adds tenant-owned data, require a tenant context and module permission there or in every server-side data entry point.
+- Bootstrap checks the one-time tenant condition again inside its database transaction, which helps prevent duplicate first-tenant creation. Auth user creation/sign-in occurs before that transaction; a failed tenant transaction can leave an authenticated user without a tenant membership. Add a recovery test and ensure setup remains safely retryable.
+- The bootstrap endpoint is protected by `BOOTSTRAP_SECRET` and becomes unavailable after a tenant exists. Remove the secret from the deployment environment after successful first setup as an operational hardening step.
+
 ## Required remediation sequence
 
 1. Add composite unique keys on referenced tenant-owned tables, for example `UNIQUE (tenant_id, id)`.
@@ -45,7 +53,8 @@ Review and protect these relationships with composite candidate keys and composi
 4. Before enforcing constraints, run read-only orphan/cross-tenant preflight queries against a **development Neon branch**. Do not silently rewrite or delete existing records.
 5. Add negative integration tests that attempt cross-tenant inserts/updates and expect database rejection.
 6. Add permission/API tests: Tenant A cannot read or mutate Tenant B's customers, quotes, orders, jobs, credits, roles, or assignments by changing IDs or `x-tenant-id`.
-7. Generate and review the Drizzle migration; run it only on a confirmed development branch first. Production migration requires a separate explicit approval.
+7. Ensure every future module data route derives tenant ID from authenticated context, and every resource-ID lookup includes the active tenant in its query predicate.
+8. Generate and review the Drizzle migration; run it only on a confirmed development branch first. Production migration requires a separate explicit approval.
 
 ## Read-only preflight query pattern
 
@@ -62,14 +71,6 @@ WHERE child.parent_id IS NOT NULL
 
 Replace table and key names for each relationship. For the current schema, inspect nullable and required relationships separately. Also inspect duplicate candidate keys before adding unique indexes.
 
-## Additional application-layer checks
-
-- `requireTenantContext` correctly resolves membership from the authenticated session and checks any requested tenant against active memberships.
-- Every data API must derive tenant ID from this context, not trust a request body/query tenant ID.
-- Every lookup by resource ID must include the active tenant in the query predicate, even after database constraints are added.
-- Keep authorization checks on both read and write endpoints; UI hiding is not authorization.
-- Ensure system-role creation and role-permission assignment paths cannot mark arbitrary user-created roles as system roles.
-
 ## Current conclusion
 
-PR #3 improves role-resolution isolation, but the static schema review identifies database-level cross-tenant reference gaps. The platform should not be described as fully tenant-isolated until the composite constraints, negative database tests, and tenant-scoped API tests have passed. No production data or database was changed during this audit.
+PR #3 improves role-resolution isolation, and the current customer API routes are tenant-scoped. The static schema review nevertheless identifies database-level cross-tenant reference gaps. The platform should not be described as fully tenant-isolated until composite constraints, negative database tests, and tenant-scoped API tests have passed. No production data or database was changed during this audit.
