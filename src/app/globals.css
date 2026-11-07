@@ -19,4 +19,4 @@
 .studio-app .text-white{color:#fff}.studio-app .text-slate-300{color:#cbd5e1}.studio-app .text-slate-400{color:#94a3b8}.studio-app .text-slate-500{color:#64748b}
 .studio-app .text-violet-300{color:#c4b5fd}.studio-app .text-cyan-300{color:#67e8f9}.studio-app .text-cyan-200{color:#a5f3fc}.studio-app .text-rose-200{color:#fecdd3}.studio-app .text-amber-300{color:#fcd34d}.studio-app .text-amber-100{color:#fef3c7}
 .studio-app button:disabled{opacity:.5;cursor:not-allowed}.studio-app button{cursor:pointer}.studio-app input:focus,.studio-app textarea:focus,.studio-app select:focus{outline:2px solid rgba(167,139,250,.65);outline-offset:1px}
-@media(min-width:1024px){.studio-app .lg\\:grid-cols-\\[1fr_1fr\\]{grid-template-columns:1fr 1fr}.studio-app .lg\\:grid-cols-\\[\\.9fr_1\\.1fr\\]{grid-template-columns:.9fr 1.1fr}}
+.studio-app .grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))}.studio-app .space-y-5{display:grid;gap:1.25rem}
