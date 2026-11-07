@@ -5,6 +5,7 @@ import {
   permissions,
   rolePermissions,
   roles,
+  tenantMemberships,
 } from "@/db/schema/core";
 import {
   requireTenantContext,
@@ -23,12 +24,12 @@ export type DataScope =
   | "none";
 
 /**
- * Resolve a permission only through a role that is valid for the active tenant.
+ * Resolve a permission only through an active membership and a role/grant
+ * pair whose tenant ownership is consistent.
  *
- * membership_roles.tenant_id and role_permissions.tenant_id are both checked,
- * and the role itself must either belong to this tenant or be a global system
- * role (tenant_id IS NULL AND is_system = true). This prevents a malformed
- * cross-tenant role assignment from granting permissions in another tenant.
+ * Tenant roles use tenant-scoped role_permissions rows. Global roles are
+ * accepted only when roles.tenant_id IS NULL AND roles.is_system = true,
+ * with a matching global role_permissions row (tenant_id IS NULL).
  */
 export async function requirePermission(
   permissionCode: string,
@@ -40,6 +41,14 @@ export async function requirePermission(
   const grants = await db
     .select({ scope: rolePermissions.scopePolicy })
     .from(membershipRoles)
+    .innerJoin(
+      tenantMemberships,
+      and(
+        eq(membershipRoles.membershipId, tenantMemberships.id),
+        eq(membershipRoles.tenantId, tenantMemberships.tenantId),
+        eq(tenantMemberships.status, "active"),
+      ),
+    )
     .innerJoin(
       roles,
       and(
@@ -54,7 +63,17 @@ export async function requirePermission(
       rolePermissions,
       and(
         eq(membershipRoles.roleId, rolePermissions.roleId),
-        eq(rolePermissions.tenantId, context.tenant.id),
+        or(
+          and(
+            eq(roles.tenantId, context.tenant.id),
+            eq(rolePermissions.tenantId, context.tenant.id),
+          ),
+          and(
+            isNull(roles.tenantId),
+            eq(roles.isSystem, true),
+            isNull(rolePermissions.tenantId),
+          ),
+        ),
       ),
     )
     .innerJoin(
@@ -65,6 +84,7 @@ export async function requirePermission(
       and(
         eq(membershipRoles.tenantId, context.tenant.id),
         eq(membershipRoles.membershipId, context.membershipId),
+        eq(tenantMemberships.userId, context.user.id),
         eq(permissions.code, permissionCode),
       ),
     );
