@@ -33,5 +33,5 @@ test("generates image, video, negative prompt and storyboard without provider ca
 });
 
 test("requires a product name before prompt generation", () => {
-  assert.throws(() => generateCreativePrompt({ product: " ", serviceType: "video_ads" }), /wajib diisi/);
+  assert.throws(() => generateCreativePrompt({ product: " ", serviceType: "video_ads", audience: "", platform: "", objective: "", tone: "", details: "", language: "id" }), /wajib diisi/);
 });
