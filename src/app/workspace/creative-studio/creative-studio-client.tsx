@@ -65,7 +65,7 @@ export default function CreativeStudioClient() {
     catch { setError("Clipboard tidak tersedia. Pilih teks lalu salin secara manual."); }
   }
 
-  return <div className="space-y-6">
+  return <div className="studio-app space-y-6">
     <div className="flex flex-wrap gap-2">
       <button onClick={() => setTab("analyze")} className={`rounded-xl px-4 py-3 text-sm font-semibold ${tab === "analyze" ? "bg-violet-600 text-white" : "border border-white/10 text-slate-300"}`}>01 · Analisis Pesanan</button>
       <button onClick={() => setTab("prompt")} className={`rounded-xl px-4 py-3 text-sm font-semibold ${tab === "prompt" ? "bg-violet-600 text-white" : "border border-white/10 text-slate-300"}`}>02 · Prompt Generator</button>
