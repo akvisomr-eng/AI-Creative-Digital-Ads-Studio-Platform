@@ -22,6 +22,13 @@
       "when": 1794051000000,
       "tag": "0002_auth_text_id_defaults",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794062017116,
+      "tag": "0003_dark_ronan",
+      "breakpoints": true
     }
   ]
 }
